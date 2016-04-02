@@ -68,7 +68,7 @@ public enum EntityType {
             if (version.isBefore(ProtocolVersion.v1_8)) {
                 return super.getId();
             } else {
-                return RABBIT.getId(); // Pretend we're a rabbit
+                return CHICKEN.getId(); // Pretend we're a chicken
             }
         }
     },
