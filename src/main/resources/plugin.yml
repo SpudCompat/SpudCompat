@@ -1,0 +1,4 @@
+name: SpudCompat
+author: Techcable
+main: net.techcable.spudcompat.SpudCompat
+version: ${project.version}
