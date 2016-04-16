@@ -5,6 +5,7 @@ import lombok.*;
 import com.google.common.base.Preconditions;
 
 import net.techcable.spudcompat.BlockPos;
+import net.techcable.spudcompat.ItemStack;
 
 @Getter
 @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
@@ -38,6 +39,9 @@ public final class MetadataDataValue {
         return new MetadataDataValue(pos, MetadataDataType.BLOCK_POS);
     }
 
+    public static MetadataDataValue ofStack(ItemStack stack) {
+        return new MetadataDataValue(stack, MetadataDataType.STACK);
+    }
 
     public static MetadataDataValue ofRawObject(Object o) {
         Preconditions.checkNotNull(o, "Null object");
