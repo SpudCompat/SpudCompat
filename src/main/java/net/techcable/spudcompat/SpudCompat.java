@@ -1,11 +1,13 @@
 package net.techcable.spudcompat;
 
+import java.io.IOException;
+
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
 import net.md_5.bungee.api.plugin.Plugin;
-
 import net.techcable.spudcompat.entity.EntityType;
+import net.techcable.spudcompat.libs.mcstats.Metrics;
 import net.techcable.spudcompat.metadata.BasicMetadataTransformer;
 import net.techcable.spudcompat.metadata.DefaultingMetadataTransformer;
 import net.techcable.spudcompat.metadata.MetadataDataType;
@@ -13,9 +15,17 @@ import net.techcable.spudcompat.metadata.MetadataDataValue;
 import net.techcable.spudcompat.metadata.MetadataTransformerRegistry;
 
 public class SpudCompat extends Plugin {
+
     @Override
     public void onEnable() {
         registerMetadataTransformers();
+        try {
+            if (new Metrics(this).start()) {
+                getLogger().info("Successfully started metrics");
+            }
+        } catch (IOException e) {
+            getLogger().warning("Unable to start metrics");
+        }
     }
 
     private void registerMetadataTransformers() {
