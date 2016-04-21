@@ -13,8 +13,11 @@ import net.techcable.spudcompat.metadata.DefaultingMetadataTransformer;
 import net.techcable.spudcompat.metadata.MetadataDataType;
 import net.techcable.spudcompat.metadata.MetadataDataValue;
 import net.techcable.spudcompat.metadata.MetadataTransformerRegistry;
+import net.techcable.spudcompat.protocol.PacketManager;
+import net.techcable.spudcompat.protocol.injector.BungeeProtocolInjector;
 
 public class SpudCompat extends Plugin {
+    private PacketManager packetManager;
 
     @Override
     public void onEnable() {
@@ -26,6 +29,7 @@ public class SpudCompat extends Plugin {
         } catch (IOException e) {
             getLogger().warning("Unable to start metrics");
         }
+        packetManager = new PacketManager(this);
     }
 
     private void registerMetadataTransformers() {
