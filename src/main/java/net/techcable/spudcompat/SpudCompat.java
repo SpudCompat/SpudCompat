@@ -1,10 +1,18 @@
 package net.techcable.spudcompat;
 
 import java.io.IOException;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Future;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.MapMaker;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.SettableFuture;
 
+import net.md_5.bungee.api.config.ServerInfo;
+import net.md_5.bungee.api.connection.Server;
 import net.md_5.bungee.api.plugin.Plugin;
 import net.techcable.spudcompat.entity.EntityType;
 import net.techcable.spudcompat.libs.mcstats.Metrics;
@@ -14,7 +22,6 @@ import net.techcable.spudcompat.metadata.MetadataDataType;
 import net.techcable.spudcompat.metadata.MetadataDataValue;
 import net.techcable.spudcompat.metadata.MetadataTransformerRegistry;
 import net.techcable.spudcompat.protocol.PacketManager;
-import net.techcable.spudcompat.protocol.injector.BungeeProtocolInjector;
 
 public class SpudCompat extends Plugin {
     private PacketManager packetManager;
@@ -30,6 +37,28 @@ public class SpudCompat extends Plugin {
             getLogger().warning("Unable to start metrics");
         }
         packetManager = new PacketManager(this);
+        getLogger().info("Pinging servers for version info");
+        getProxy().getServers().values().forEach(this::requestVersion); // Ping each server's version
+    }
+
+    private final ConcurrentMap<ServerInfo, Future<ProtocolVersion>> serverVersions = new MapMaker().weakKeys().makeMap();
+
+    public ProtocolVersion getVersion(Server server) {
+        return Futures.getUnchecked(serverVersions.computeIfAbsent(server.getInfo(), this::requestVersion));
+    }
+
+    private Future<ProtocolVersion> requestVersion(ServerInfo serverInfo) {
+        Preconditions.checkNotNull(serverInfo, "Null server info");
+        SettableFuture<ProtocolVersion> future = SettableFuture.create();
+        serverInfo.ping((result, exception) -> {
+            if (result != null) {
+                future.set(ProtocolVersion.getById(result.getVersion().getProtocol()));
+                getLogger().info("Successfully pinged " + serverInfo.getName());
+            } else {
+                future.setException(exception);
+            }
+        });
+        return future;
     }
 
     private void registerMetadataTransformers() {
