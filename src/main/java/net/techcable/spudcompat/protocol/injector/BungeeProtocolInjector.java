@@ -5,7 +5,6 @@ import lombok.*;
 import com.google.common.base.Preconditions;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -13,15 +12,14 @@ import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 
 import net.md_5.bungee.UserConnection;
-import net.md_5.bungee.api.event.PlayerHandshakeEvent;
+import net.md_5.bungee.api.event.PostLoginEvent;
 import net.md_5.bungee.api.plugin.Listener;
-import net.md_5.bungee.connection.InitialHandler;
 import net.md_5.bungee.event.EventHandler;
-import net.md_5.bungee.netty.ChannelWrapper;
 import net.md_5.bungee.netty.PipelineUtils;
 import net.md_5.bungee.protocol.DefinedPacket;
 import net.md_5.bungee.protocol.PacketWrapper;
-import net.techcable.spudcompat.protocol.Connection;
+import net.md_5.bungee.protocol.ProtocolConstants;
+import net.techcable.spudcompat.protocol.PlayerConnection;
 import net.techcable.spudcompat.protocol.ProtocolDirection;
 
 @RequiredArgsConstructor
@@ -32,13 +30,13 @@ public class BungeeProtocolInjector implements Listener {
     public static final String SPUD_OUTGOING_TRANSFORMER = "spud-outgoing-transformer";
 
     @EventHandler
-    public void onHandshake(PlayerHandshakeEvent event) {
-        Connection connection = wrap(event.getConnection());
+    public void onPostLogin(PostLoginEvent event) {
+        PlayerConnection connection = new UserConnectionPlayerConnection((UserConnection) event.getPlayer());
         if (!connection.isSupportedVersion()) return;
         inject(connection);
     }
 
-    public void inject(Connection connection) {
+    public void inject(PlayerConnection connection) {
         Preconditions.checkNotNull(connection, "Null connection");
         Preconditions.checkArgument(connection.isSupportedVersion(), "Unsupported version %s", connection.getVersionId());
         Channel channel = connection.getChannel();
@@ -61,8 +59,15 @@ public class BungeeProtocolInjector implements Listener {
                     if (result.getResult().isLeft()) {
                         RawPacket rawPacket = result.getResult().getLeft();
                         toSend = new PacketWrapper(null, rawPacket.getAllData());
-                    } else {
+                    } else if (connection.getVersion() == result.getVersion()) {
                         toSend = new PacketWrapper(result.getResult().getRight(), null);
+                    } else {
+                        DefinedPacket definedPacket = result.getResult().getRight();
+                        ByteBuf buf = ctx.alloc().buffer();
+                        int packetId = connection.getState().getId(definedPacket.getClass(), result.getVersion(), ProtocolDirection.SERVERBOUND);
+                        DefinedPacket.writeVarInt(packetId, buf);
+                        definedPacket.write(buf, ProtocolConstants.Direction.TO_SERVER, result.getVersion().getId());
+                        toSend = new PacketWrapper(null, buf);
                     }
                     ctx.writeAndFlush(toSend, ctx.voidPromise());
                 }
@@ -88,23 +93,19 @@ public class BungeeProtocolInjector implements Listener {
                     if (result.getResult().isLeft()) {
                         RawPacket rawPacket = result.getResult().getLeft();
                         toSend = new PacketWrapper(null, rawPacket.getAllData());
-                    } else {
+                    } else if (result.getVersion() == connection.getVersion()) {
                         toSend = new PacketWrapper(result.getResult().getRight(), null);
+                    } else {
+                        DefinedPacket definedPacket = result.getResult().getRight();
+                        ByteBuf buf = ctx.alloc().buffer();
+                        int packetId = connection.getState().getId(definedPacket.getClass(), result.getVersion(), ProtocolDirection.CLIENTBOUND);
+                        DefinedPacket.writeVarInt(packetId, buf);
+                        definedPacket.write(buf, ProtocolConstants.Direction.TO_CLIENT, result.getVersion().getId());
+                        toSend = new PacketWrapper(null, buf);
                     }
                     ctx.writeAndFlush(toSend, ctx.voidPromise());
                 }
             }
         });
-    }
-
-
-    public static Connection wrap(net.md_5.bungee.api.connection.Connection connection) {
-        if (connection instanceof InitialHandler) {
-            return new InitialHandlerConnection((InitialHandler) connection);
-        } else if (connection instanceof UserConnection) {
-            return new UserConnectionConnection((UserConnection) connection);
-        } else {
-            throw new UnsupportedOperationException("Unable to wrap connection type: " + connection.getClass().getName());
-        }
     }
 }

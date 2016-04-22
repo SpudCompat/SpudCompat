@@ -2,10 +2,11 @@ package net.techcable.spudcompat.protocol;
 
 import io.netty.channel.Channel;
 
+import net.md_5.bungee.api.connection.Server;
 import net.techcable.spudcompat.ProtocolVersion;
 import net.techcable.spudcompat.protocol.injector.RawPacket;
 
-public interface Connection {
+public interface PlayerConnection {
 
     public default boolean isSupportedVersion() {
         return ProtocolVersion.getById(getVersionId()) != null;
@@ -28,4 +29,6 @@ public interface Connection {
     public void sendPacket(RawPacket rawPacket);
 
     public Channel getChannel();
+
+    public Server getServer();
 }

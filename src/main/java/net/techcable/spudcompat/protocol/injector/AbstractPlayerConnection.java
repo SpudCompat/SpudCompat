@@ -2,26 +2,19 @@ package net.techcable.spudcompat.protocol.injector;
 
 import java.lang.reflect.Field;
 
-import com.google.common.base.Preconditions;
-
-import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 
 import net.md_5.bungee.netty.ChannelWrapper;
 import net.md_5.bungee.protocol.MinecraftDecoder;
-import net.md_5.bungee.protocol.MinecraftEncoder;
 import net.md_5.bungee.protocol.Protocol;
-import net.techcable.spudcompat.ProtocolVersion;
-import net.techcable.spudcompat.protocol.Connection;
+import net.techcable.spudcompat.protocol.PlayerConnection;
 import net.techcable.spudcompat.protocol.ProtocolState;
 
-public abstract class AbstractConnection implements Connection {
+public abstract class AbstractPlayerConnection implements PlayerConnection {
 
     @Override
     public void sendPacket(RawPacket rawPacket) {
-        ByteBuf buf = getChannel().alloc().buffer(rawPacket.getPacketData().readableBytes() + 5);
-        rawPacket.write(buf);
-        getChannelWrapper().write(buf);
+        getChannelWrapper().write(rawPacket.getAllData());
     }
 
     @Override

@@ -5,12 +5,10 @@ import lombok.*;
 import com.google.common.base.Preconditions;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 
 import net.md_5.bungee.protocol.DefinedPacket;
 import net.md_5.bungee.protocol.PacketWrapper;
-import net.techcable.spudcompat.protocol.Connection;
 import net.techcable.spudcompat.protocol.PacketType;
 import net.techcable.spudcompat.protocol.ProtocolDirection;
 import net.techcable.spudcompat.protocol.ProtocolState;

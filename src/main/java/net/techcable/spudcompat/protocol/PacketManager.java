@@ -4,10 +4,12 @@ package net.techcable.spudcompat.protocol;
 import lombok.*;
 
 import net.md_5.bungee.protocol.DefinedPacket;
+import net.techcable.spudcompat.ProtocolVersion;
 import net.techcable.spudcompat.SpudCompat;
 import net.techcable.spudcompat.protocol.injector.BungeeProtocolInjector;
 import net.techcable.spudcompat.protocol.injector.RawPacket;
 import net.techcable.spudcompat.protocol.injector.RawPacketListener;
+import net.techcable.spudcompat.utils.Either;
 
 public class PacketManager implements RawPacketListener {
     @Getter
@@ -21,22 +23,24 @@ public class PacketManager implements RawPacketListener {
     }
 
     @Override
-    public Result onSend(Connection connection, RawPacket packet) {
+    public Result onSend(PlayerConnection connection, RawPacket packet) {
         return Result.IGNORED;
     }
 
     @Override
-    public Result onReceive(Connection connection, RawPacket packet) {
+    public Result onReceive(PlayerConnection connection, RawPacket packet) {
         return Result.IGNORED;
     }
 
     @Override
-    public Result onSend(Connection connection, DefinedPacket definedPacket) {
-        return Result.IGNORED;
+    public Result onSend(PlayerConnection connection, DefinedPacket definedPacket) {
+        ProtocolVersion version = plugin.getVersion(connection.getServer())
+        return new Result(Either.ofRight(definedPacket), version);
     }
 
     @Override
-    public Result onReceive(Connection connection, DefinedPacket definedPacket) {
-        return Result.IGNORED;
+    public Result onReceive(PlayerConnection connection, DefinedPacket definedPacket) {
+        ProtocolVersion version = plugin.getVersion(connection.getServer())
+        return new Result(Either.ofRight(definedPacket), version);
     }
 }
