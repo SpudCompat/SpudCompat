@@ -18,13 +18,12 @@ import net.md_5.bungee.event.EventHandler;
 import net.md_5.bungee.netty.PipelineUtils;
 import net.md_5.bungee.protocol.DefinedPacket;
 import net.md_5.bungee.protocol.PacketWrapper;
-import net.md_5.bungee.protocol.ProtocolConstants;
 import net.techcable.spudcompat.protocol.PlayerConnection;
 import net.techcable.spudcompat.protocol.ProtocolDirection;
 
 @RequiredArgsConstructor
 public class BungeeProtocolInjector implements Listener {
-    private final RawPacketListener listener;
+    private final PacketListener listener;
 
     public static final String SPUD_INCOMING_TRANSFORMER = "spud-incoming-transformer";
     public static final String SPUD_OUTGOING_TRANSFORMER = "spud-outgoing-transformer";
@@ -44,31 +43,20 @@ public class BungeeProtocolInjector implements Listener {
             @Override
             public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                 PacketWrapper wrapper = (PacketWrapper) msg;
-                RawPacketListener.Result result;
+                PacketListener.Result result;
                 if (wrapper.packet != null) {
-                    result = listener.onReceive(connection, wrapper.packet);
+                    result = listener.onReceive(connection, new BungeePacket(wrapper.packet));
                 } else {
                     RawPacket rawPacket = RawPacket.fromBuffer(wrapper.buf, connection.getState(), ProtocolDirection.SERVERBOUND);
-                    result = listener.onReceive(connection, rawPacket);
+                    result = listener.onRawReceive(connection, rawPacket);
                 }
                 Preconditions.checkNotNull(result, "Null result");
                 if (result.isIgnored()) {
                     ctx.writeAndFlush(wrapper, ctx.voidPromise());
                 } else if (!result.isCanceled()) {
                     PacketWrapper toSend;
-                    if (result.getResult().isLeft()) {
-                        RawPacket rawPacket = result.getResult().getLeft();
-                        toSend = new PacketWrapper(null, rawPacket.getAllData());
-                    } else if (connection.getVersion() == result.getVersion()) {
-                        toSend = new PacketWrapper(result.getResult().getRight(), null);
-                    } else {
-                        DefinedPacket definedPacket = result.getResult().getRight();
-                        ByteBuf buf = ctx.alloc().buffer();
-                        int packetId = connection.getState().getId(definedPacket.getClass(), result.getVersion(), ProtocolDirection.SERVERBOUND);
-                        DefinedPacket.writeVarInt(packetId, buf);
-                        definedPacket.write(buf, ProtocolConstants.Direction.TO_SERVER, result.getVersion().getId());
-                        toSend = new PacketWrapper(null, buf);
-                    }
+                    RawPacket rawPacket = result.getResult();
+                    toSend = new PacketWrapper(null, rawPacket.getAllData());
                     ctx.writeAndFlush(toSend, ctx.voidPromise());
                 }
             }
@@ -76,12 +64,12 @@ public class BungeeProtocolInjector implements Listener {
         channel.pipeline().addBefore(PipelineUtils.PACKET_ENCODER, SPUD_OUTGOING_TRANSFORMER, new ChannelOutboundHandlerAdapter() {
             @Override
             public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-                RawPacketListener.Result result;
+                PacketListener.Result result;
                 if (msg instanceof ByteBuf) {
                     RawPacket rawPacket = RawPacket.fromBuffer((ByteBuf) msg, connection.getState(), ProtocolDirection.CLIENTBOUND);
-                    result = listener.onSend(connection, rawPacket);
+                    result = listener.onRawSend(connection, rawPacket);
                 } else if (msg instanceof DefinedPacket) {
-                    result = listener.onSend(connection, (DefinedPacket) msg);
+                    result = listener.onSend(connection, new BungeePacket((DefinedPacket) msg));
                 } else {
                     throw new UnsupportedOperationException("Unable to handle: " + msg.getClass());
                 }
@@ -90,19 +78,8 @@ public class BungeeProtocolInjector implements Listener {
                     ctx.writeAndFlush(msg, ctx.voidPromise());
                 } else if (!result.isCanceled()) {
                     PacketWrapper toSend;
-                    if (result.getResult().isLeft()) {
-                        RawPacket rawPacket = result.getResult().getLeft();
-                        toSend = new PacketWrapper(null, rawPacket.getAllData());
-                    } else if (result.getVersion() == connection.getVersion()) {
-                        toSend = new PacketWrapper(result.getResult().getRight(), null);
-                    } else {
-                        DefinedPacket definedPacket = result.getResult().getRight();
-                        ByteBuf buf = ctx.alloc().buffer();
-                        int packetId = connection.getState().getId(definedPacket.getClass(), result.getVersion(), ProtocolDirection.CLIENTBOUND);
-                        DefinedPacket.writeVarInt(packetId, buf);
-                        definedPacket.write(buf, ProtocolConstants.Direction.TO_CLIENT, result.getVersion().getId());
-                        toSend = new PacketWrapper(null, buf);
-                    }
+                    RawPacket rawPacket = result.getResult();
+                    toSend = new PacketWrapper(null, rawPacket.getAllData());
                     ctx.writeAndFlush(toSend, ctx.voidPromise());
                 }
             }
