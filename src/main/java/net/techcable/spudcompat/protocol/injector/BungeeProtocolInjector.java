@@ -49,6 +49,7 @@ public class BungeeProtocolInjector implements Listener {
                 } else {
                     RawPacket rawPacket = RawPacket.fromBuffer(wrapper.buf, connection.getState(), ProtocolDirection.SERVERBOUND);
                     result = listener.onRawReceive(connection, rawPacket);
+                    rawPacket.release();
                 }
                 Preconditions.checkNotNull(result, "Null result");
                 if (result.isIgnored()) {
@@ -56,7 +57,8 @@ public class BungeeProtocolInjector implements Listener {
                 } else if (!result.isCanceled()) {
                     PacketWrapper toSend;
                     RawPacket rawPacket = result.getResult();
-                    toSend = new PacketWrapper(null, rawPacket.getAllData());
+                    toSend = new PacketWrapper(null, rawPacket.getAllData().retain());
+                    rawPacket.release();
                     ctx.writeAndFlush(toSend, ctx.voidPromise());
                 }
             }
@@ -68,6 +70,7 @@ public class BungeeProtocolInjector implements Listener {
                 if (msg instanceof ByteBuf) {
                     RawPacket rawPacket = RawPacket.fromBuffer((ByteBuf) msg, connection.getState(), ProtocolDirection.CLIENTBOUND);
                     result = listener.onRawSend(connection, rawPacket);
+                    rawPacket.release();
                 } else if (msg instanceof DefinedPacket) {
                     result = listener.onSend(connection, new BungeePacket((DefinedPacket) msg));
                 } else {
@@ -79,7 +82,8 @@ public class BungeeProtocolInjector implements Listener {
                 } else if (!result.isCanceled()) {
                     PacketWrapper toSend;
                     RawPacket rawPacket = result.getResult();
-                    toSend = new PacketWrapper(null, rawPacket.getAllData());
+                    toSend = new PacketWrapper(null, rawPacket.getAllData().retain());
+                    rawPacket.release();
                     ctx.writeAndFlush(toSend, ctx.voidPromise());
                 }
             }

@@ -35,8 +35,13 @@ public interface PacketListener {
             this(false, checkNotNull(result, "Null result"), checkNotNull(version, "Null version"));
         }
 
-        public Result(Packet packet, ProtocolVersion version, ProtocolState state, ProtocolDirection direction) {
-            this(packet.toRaw(checkNotNull(version, "Null version"), checkNotNull(state, "Null state"), checkNotNull(direction, "Null direction")), version);
+        public Result(PlayerConnection connection, Packet packet, ProtocolVersion version, ProtocolState state, ProtocolDirection direction) {
+            this(packet.toRaw(
+                    checkNotNull(connection, "Null connection").getChannel().alloc(),
+                    checkNotNull(version, "Null version"),
+                    checkNotNull(state, "Null state"),
+                    checkNotNull(direction, "Null direction")
+            ), version);
         }
 
         public boolean isIgnored() {

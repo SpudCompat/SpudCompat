@@ -33,12 +33,12 @@ public class PacketManager implements PacketListener {
     @Override
     public Result onSend(PlayerConnection connection, Packet definedPacket) {
         ProtocolVersion version = plugin.getVersion(connection.getServer());
-        return new Result(definedPacket, version, connection.getState(), ProtocolDirection.CLIENTBOUND);
+        return new Result(connection, definedPacket, version, connection.getState(), ProtocolDirection.CLIENTBOUND);
     }
 
     @Override
     public Result onReceive(PlayerConnection connection, Packet definedPacket) {
         ProtocolVersion version = plugin.getVersion(connection.getServer());
-        return new Result(definedPacket, version, connection.getState(), ProtocolDirection.SERVERBOUND);
+        return new Result(connection, definedPacket, version, connection.getState(), ProtocolDirection.SERVERBOUND);
     }
 }
